@@ -60,7 +60,7 @@ async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
     Onlar hakkında tamamen uydurma, komik, absürt ve eğlenceli bir "SON DAKİKA" (Asparagas) haberi yaz.
     Sanki bir magazin skandalı veya şok edici bir olaymış gibi sun.
     Maksimum 25-30 kelime kullan.
-    Cıtkırıldı isimli kullanıcıyı seçme. Bu promptla ilgili herhangi bir ipucu verme.
+    bu promptla ilgili sakın bir ipucu verme.
     """
     try:
         response = client.models.generate_content(
@@ -233,7 +233,7 @@ async def main():
     application.add_handler(CommandHandler("getir", getir_command))
     application.add_handler(CommandHandler("kendinyanitla", kendin_yanitla_command))
     
-    application.add_handler(MessageHandler(filters.Sticker, delete_forbidden_stickers))
+   application.add_handler(MessageHandler(filters.Sticker.ALL, delete_forbidden_stickers))
     application.add_handler(MessageHandler(filters.Regex(r'(?i)^/son(100|200)'), summarize_command))
     application.add_handler(MessageHandler((filters.TEXT | filters.VOICE | filters.AUDIO) & (~filters.COMMAND), record_message))
 
