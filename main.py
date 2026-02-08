@@ -180,7 +180,7 @@ async def summarize_command(update, context):
         if not gemini_task.done():
             await asyncio.sleep(3)
             if not gemini_task.done():
-                try: await status_msg.edit_text("⚡ Beypazarı yalanları gerçeklerden ayrıştırılıyor...")
+                try: await status_msg.edit_text("⚡ Gerçekler, Beypazarı yalanlarından ayrıştırılıyor...")
                 except: pass
 
         if not gemini_task.done():
@@ -233,10 +233,14 @@ async def main():
     application.add_handler(MessageHandler(filters.Regex(r'(?i)^/son(100|200)'), summarize_command))
     application.add_handler(MessageHandler((filters.TEXT | filters.VOICE | filters.AUDIO) & (~filters.COMMAND), record_message))
 
-    await application.initialize(); await application.start()
+    await application.initialize()
+    await application.start()
     await application.updater.start_polling(drop_pending_updates=True)
-    while True: await asyncio.sleep(3600)
+    while True:
+        await asyncio.sleep(3600)
 
 if __name__ == "__main__":
-    try: asyncio.run(main())
-    except: pass
+    try:
+        asyncio.run(main())
+    except:
+        pass
