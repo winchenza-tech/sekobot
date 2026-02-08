@@ -78,7 +78,7 @@ async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
 async def reject_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_photo(
         photo=UNAUTHORIZED_IMAGE_URL,
-        caption="Yalnızca Sekoland grubunda çalışacağını söyledim. Beynin nerede?"
+        caption="Zenithar sana söylemedi mi?\n Yalnızca Sekoland grubunda çalışırım."
     )
 
 async def record_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
