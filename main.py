@@ -223,17 +223,13 @@ async def main():
     target_hours = '1,2,3,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0'
     scheduler.add_job(send_asparagas_haber, 'cron', hour=target_hours, minute=45, args=[application])
     scheduler.start()
-
-
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE & (~filters.User(ADMIN_ID)), reject_private))
-
     application.add_handler(CommandHandler("duyuru", announce_command))
     application.add_handler(CommandHandler("yorumla", comment_command))
     application.add_handler(CommandHandler("yanitla", admin_text_reply))
     application.add_handler(CommandHandler("getir", getir_command))
     application.add_handler(CommandHandler("kendinyanitla", kendin_yanitla_command))
-    
-   application.add_handler(MessageHandler(filters.Sticker.ALL, delete_forbidden_stickers))
+    application.add_handler(MessageHandler(filters.Sticker.ALL, delete_forbidden_stickers))
     application.add_handler(MessageHandler(filters.Regex(r'(?i)^/son(100|200)'), summarize_command))
     application.add_handler(MessageHandler((filters.TEXT | filters.VOICE | filters.AUDIO) & (~filters.COMMAND), record_message))
 
