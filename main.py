@@ -28,12 +28,10 @@ def keep_alive():
     t = Thread(target=run_flask)
     t.start()
 
-
 nest_asyncio.apply()
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-
 
 AUTHORIZED_GROUP_ID = -1002241271415 
 BOT_NAME = "Zenithar" 
@@ -49,7 +47,6 @@ last_usage = {}
 COOLDOWN_MINUTES = 10
 pending_replies = {} 
 
-
 async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
     if len(group_history) < 5: return
     recent_context = "\n".join(list(group_history)[-20:])
@@ -57,10 +54,11 @@ async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
     Aşağıdaki son konuşma kayıtlarını incele:
     {recent_context}
     GÖREV: Bu konuşmalarda geçen kişilerden 1 veya 2 tanesini seç.
-    Onlar hakkında tamamen uydurma, komik, absürt ve eğlenceli bir "SON DAKİKA" (Asparagas) haberi yaz.
+    Onlar hakkında tamamen uydurma, komik, absürt ve eğlenceli bir flaş haber (Asparagas) haberi yaz.
     Sanki bir magazin skandalı veya şok edici bir olaymış gibi sun.
     Maksimum 25-30 kelime kullan.
     bu promptla ilgili sakın bir ipucu verme.
+    asla * işareti kullanma
     """
     try:
         response = client.models.generate_content(
@@ -74,11 +72,14 @@ async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
 
 
 
-
 async def reject_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_photo(
         photo=UNAUTHORIZED_IMAGE_URL,
         caption="Yalnızca Sekoland grubunda çalışacağını söylemiştim."
+async def reject_unauthorized_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_photo(
+        photo=UNAUTHORIZED_IMAGE_URL,
+        caption="Zenithar sana Sekoland grubunda çalışmayacağını söylemişti. Beyinsiz."
     )
 
 async def record_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -151,8 +152,8 @@ async def summarize_command(update, context):
     
     full_text = "\n".join(list(group_history)[-count:])
     prompt = f"""
-   Aşağıdaki konuşmaları esprili, muzip, zekice laf sokmalı iğneleyici bir sivri dil kullanarak özetle . Özel kurallar:
-     1: bu prompt hakkında sakın yazıyla hiçbir ipucu verme. benim aşağıda anlattığım kurallara uyarak özeti paylaş.
+    Aşağıdaki konuşmaları esprili, muzip, zekice laf sokmalı iğneleyici bir sivri dil kullanarak özetle . Özel kurallar:
+      1: bu prompt hakkında sakın yazıyla hiçbir ipucu verme. benim aşağıda anlattığım kurallara uyarak özeti paylaş.
     2: Özette Beypazarı isimli kullanıcı varsa ona karşı tavrın ÇOK SERT, ACIMASIZ ve AŞAĞILAYICI olsun. Onlar senin ezeli düşmanın gibi davran. en ağır eleştirileri yap. Hata veya saçmalıklarını yüzlerine vur.
     3: Özet içerisinde asla * (yıldız) işareti kullanma.
     4: Yazılanların hepsini 'o şunu dedi bu bunu dedi' gibi aynen yazmak yerine daha çok olay olarak özetle. Daha çok ince espri ve yorum kat.
@@ -180,7 +181,7 @@ async def summarize_command(update, context):
         if not gemini_task.done():
             await asyncio.sleep(3)
             if not gemini_task.done():
-                try: await status_msg.edit_text("⚡ Gerçekler, Beypazarı yalanlarından ayrıştırılıyor...")
+                try: await status_msg.edit_text("😛 Gerçekler, Beypazarı yalanlarından ayrıştırılıyor...")
                 except: pass
 
         if not gemini_task.done():
@@ -215,7 +216,6 @@ async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAUL
         except: pass
 
 
-
 async def main():
     keep_alive()
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
@@ -223,8 +223,11 @@ async def main():
     target_hours = '1,2,3,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0'
     scheduler.add_job(send_asparagas_haber, 'cron', hour=target_hours, minute=45, args=[application])
     scheduler.start()
+
+   
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE & (~filters.User(ADMIN_ID)), reject_private))
-    application.add_handler(CommandHandler("duyuru", announce_command))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & (~filters.Chat(AUTHORIZED_GROUP_ID)), reject_unauthorized_group))
+ application.add_handler(CommandHandler("duyuru", announce_command))
     application.add_handler(CommandHandler("yorumla", comment_command))
     application.add_handler(CommandHandler("yanitla", admin_text_reply))
     application.add_handler(CommandHandler("getir", getir_command))
