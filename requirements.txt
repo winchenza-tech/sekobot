@@ -1,0 +1,6 @@
+python-telegram-bot
+google-genai
+Flask
+APScheduler
+pytz
+nest_asyncio
