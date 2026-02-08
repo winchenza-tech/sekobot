@@ -13,6 +13,7 @@ from google.genai import types
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz 
 
+# --- 1. WEB SUNUCUSU ---
 flask_app = Flask('')
 
 @flask_app.route('/')
@@ -27,6 +28,7 @@ def keep_alive():
     t = Thread(target=run_flask)
     t.start()
 
+# --- 2. AYARLAR VE HAFIZA ---
 nest_asyncio.apply()
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -45,6 +47,10 @@ message_id_cache = {}
 last_usage = {}
 COOLDOWN_MINUTES = 10
 pending_replies = {} 
+
+
+# --- 3. MOTORLAR ---
+
 async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
     if len(group_history) < 5: return
     recent_context = "\n".join(list(group_history)[-20:])
@@ -67,6 +73,9 @@ async def send_asparagas_haber(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Asparagas motoru hatası: {e}")
 
+
+# --- 4. BOT FONKSİYONLARI ---
+
 async def reject_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_photo(
         photo=UNAUTHORIZED_IMAGE_URL,
@@ -80,20 +89,26 @@ async def reject_unauthorized_group(update: Update, context: ContextTypes.DEFAUL
     )
 
 async def record_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-   if update.effective_chat.type == 'private' and update.effective_user.id == ADMIN_ID:
+    # Admin DM Yanıtlama Sistemi
+    if update.effective_chat.type == 'private' and update.effective_user.id == ADMIN_ID:
         if update.effective_user.id in pending_replies:
             target_id = pending_replies.pop(update.effective_user.id)
-            if update.message.text: await context.bot.send_message(chat_id=AUTHORIZED_GROUP_ID, text=update.message.text, reply_to_message_id=target_id)
-            elif update.message.voice: await context.bot.send_voice(chat_id=AUTHORIZED_GROUP_ID, voice=update.message.voice.file_id, reply_to_message_id=target_id)
-            elif update.message.audio: await context.bot.send_audio(chat_id=AUTHORIZED_GROUP_ID, audio=update.message.audio.file_id, reply_to_message_id=target_id)
+            if update.message.text: 
+                await context.bot.send_message(chat_id=AUTHORIZED_GROUP_ID, text=update.message.text, reply_to_message_id=target_id)
+            elif update.message.voice: 
+                await context.bot.send_voice(chat_id=AUTHORIZED_GROUP_ID, voice=update.message.voice.file_id, reply_to_message_id=target_id)
+            elif update.message.audio: 
+                await context.bot.send_audio(chat_id=AUTHORIZED_GROUP_ID, audio=update.message.audio.file_id, reply_to_message_id=target_id)
             return
 
+    # Grup Mesajlarını Kaydetme
     if update.effective_chat.id == AUTHORIZED_GROUP_ID and update.message and update.message.text:
         u_name = update.effective_user.first_name
         if len(u_name) <= 2: u_name = f"{u_name}"
         group_history.append(f"{u_name}: {update.message.text}")
         message_id_cache[update.message.message_id] = {"name": u_name, "text": update.message.text}
-        if len(message_id_cache) > 50: del message_id_cache[next(iter(message_id_cache))]
+        if len(message_id_cache) > 50: 
+            del message_id_cache[next(iter(message_id_cache))]
 
 async def announce_command(update, context):
     if update.effective_user.id == ADMIN_ID and context.args:
@@ -143,7 +158,6 @@ async def summarize_command(update, context):
     if len(group_history) < 10:
         await update.message.reply_text("❌ Yeterli mesaj yok.")
         return
-
 
     status_msg = await update.message.reply_text("⏳ Yukarıdaki mesajları okuyorum...")
     
@@ -200,6 +214,7 @@ async def getir_command(update, context):
         clean_id = str(AUTHORIZED_GROUP_ID).replace("-100", "")
         res = "📜 **SON MESAJLAR:**\n\n" + "\n".join([f"👤 {message_id_cache[m_id]['name']} -> https://t.me/c/{clean_id}/{m_id}" for m_id in list(message_id_cache.keys())[-5:]])
         await update.message.reply_text(res)
+
 async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != AUTHORIZED_GROUP_ID: return
     if not update.message or not update.message.sticker: return
@@ -208,6 +223,10 @@ async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAUL
     if set_name in banned_packs:
         try: await update.message.delete()
         except: pass
+
+
+# --- 5. ANA ÇALIŞTIRICI ---
+
 async def main():
     keep_alive()
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
@@ -215,8 +234,9 @@ async def main():
     target_hours = '1,2,3,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0'
     scheduler.add_job(send_asparagas_haber, 'cron', hour=target_hours, minute=45, args=[application])
     scheduler.start()
- application.add_handler(MessageHandler(filters.ChatType.PRIVATE & (~filters.User(ADMIN_ID)), reject_private))
-application.add_handler(MessageHandler(filters.ChatType.GROUPS & (~filters.Chat(chat_id=AUTHORIZED_GROUP_ID)), reject_unauthorized_group))
+
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & (~filters.User(ADMIN_ID)), reject_private))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & (~filters.Chat(chat_id=AUTHORIZED_GROUP_ID)), reject_unauthorized_group))
 
     application.add_handler(CommandHandler("duyuru", announce_command))
     application.add_handler(CommandHandler("yorumla", comment_command))
