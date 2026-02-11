@@ -165,7 +165,7 @@ async def summarize_command(update, context):
     full_text = "\n".join(list(group_history)[-count:])
     prompt = f"""
     Aşağıdaki konuşmaları esprili, muzip, zekice laf sokmalı iğneleyici, esprili ve eleştirel alaycı bir sivri dil kullanarak özetle . Özel kurallar:
-     
+      
     1: olayları iyi analiz et.
     2: Özet içerisinde asla * (yıldız) işareti kullanma.
     3: Yazılanların hepsini 'o şunu dedi bu bunu dedi' gibi aynen yazmak yerine daha çok olay olarak özetle. Daha çok ince espri ve yorum kat.
@@ -217,20 +217,27 @@ async def getir_command(update, context):
         res = "📜 **SON MESAJLAR:**\n\n" + "\n".join([f"👤 {message_id_cache[m_id]['name']} -> https://t.me/c/{clean_id}/{m_id}" for m_id in list(message_id_cache.keys())[-5:]])
         await update.message.reply_text(res)
 
-# --- YASAKLI STICKER SİLİCİ ---
+# --- YASAKLI STICKER SİLİCİ (GÜNCELLENDİ) ---
 async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != AUTHORIZED_GROUP_ID: return
     if not update.message or not update.message.sticker: return
     
     set_name = update.message.sticker.set_name
-    banned_packs = ["Dickss", "Trbanl"]
+    # Yeni sticker paketi eklendi
+    banned_packs = ["Dickss", "Trbanl", "FapPornVulgarKissLoveNsfwXXX"]
     
     BEYPAZARI_ID = 8561696979
     if update.effective_user.id == BEYPAZARI_ID and set_name == "Trbanl":
         return
 
     if set_name in banned_packs:
-        try: await update.message.delete()
+        try: 
+            await update.message.delete()
+            # Silme işleminden sonra mesaj gönderme eklendi
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Bu sticker yasaklı. Sildim gitti."
+            )
         except: pass
 
 
