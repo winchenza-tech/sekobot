@@ -123,10 +123,10 @@ async def comment_command(update, context):
     
     if user_id in yorumla_last_usage:
         gecen_sure = (now - yorumla_last_usage[user_id]).total_seconds()
-        if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 60:
-            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES * 60 - gecen_sure) // 60)
+        if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 30:
+            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES *  - gecen_sure) // 30)
             if kalan_dakika == 0: kalan_dakika = 1
-            await update.message.reply_text(f"🛑 /yorumla komutunu saatte 1 kez kullanabilirsin. Lütfen {kalan_dakika} dakika daha bekle.")
+            await update.message.reply_text(f"🛑 tekrar kullanım için {kalan_dakika} dakika daha bekle.")
             return
     # ----------------------------------------------
     
