@@ -14,7 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
 
 # --- 1. WEB SUNUCUSU ---
-flask_app = Flask('')
+flask_app = Flask(__name__)
 
 @flask_app.route('/')
 def home():
@@ -48,6 +48,9 @@ last_usage = {}
 COOLDOWN_MINUTES = 10
 pending_replies = {}
 
+# Yorumla komutu için özel hafıza
+yorumla_last_usage = {}
+YORUMLA_COOLDOWN_MINUTES = 60
 
 # --- 3. MOTORLAR ---
 
@@ -114,6 +117,17 @@ async def announce_command(update, context):
 
 async def comment_command(update, context):
     if update.effective_chat.id != AUTHORIZED_GROUP_ID or not update.message.reply_to_message: return
+    
+    # --- YORUMLA COOLDOWN KONTROLÜ (SESSİZ MOD) ---
+    user_id = update.effective_user.id
+    now = datetime.datetime.now()
+    
+    if user_id in yorumla_last_usage:
+        gecen_sure = (now - yorumla_last_usage[user_id]).total_seconds()
+        if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 60:
+            return  # Süre dolmadıysa sessizce işlemi iptal et
+    # ----------------------------------------------
+    
     target = update.message.reply_to_message
     t_name = target.from_user.first_name
     if t_name.lower() == BOT_NAME.lower():
@@ -126,6 +140,9 @@ async def comment_command(update, context):
     try:
         res = client.models.generate_content(model='gemini-2.5-flash', contents=roast_prompt)
         await target.reply_text(f"💀{res.text}")
+        
+        # İşlem başarılı olursa süreyi kaydet
+        yorumla_last_usage[user_id] = now
     except: pass
 
 async def admin_text_reply(update, context):
@@ -223,7 +240,6 @@ async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAUL
     if not update.message or not update.message.sticker: return
     
     set_name = update.message.sticker.set_name
-    # Yeni sticker paketi eklendi
     banned_packs = ["Dickss", "Trbanl", "FapPornVulgarKissLoveNsfwXXX"]
     
     BEYPAZARI_ID = 8561696979
@@ -233,7 +249,6 @@ async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAUL
     if set_name in banned_packs:
         try: 
             await update.message.delete()
-            # Silme işleminden sonra mesaj gönderme eklendi
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="Bu sticker yasaklı. Sildim gitti."
