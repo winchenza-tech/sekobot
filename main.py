@@ -42,7 +42,7 @@ UNAUTHORIZED_IMAGE_URL = "https://i.ibb.co/8DwGFRt0/MG-8439.jpg"
 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
-group_history = deque(maxlen=350)
+group_history = deque(maxlen=250)
 message_id_cache = {}
 last_usage = {}
 COOLDOWN_MINUTES = 10
@@ -50,7 +50,7 @@ pending_replies = {}
 
 # Yorumla komutu için özel hafıza
 yorumla_last_usage = {}
-YORUMLA_COOLDOWN_MINUTES = 60
+YORUMLA_COOLDOWN_MINUTES = 30  # 30 Dakikaya düşürüldü
 
 # --- 3. MOTORLAR ---
 
@@ -117,16 +117,16 @@ async def announce_command(update, context):
 async def comment_command(update, context):
     if update.effective_chat.id != AUTHORIZED_GROUP_ID or not update.message.reply_to_message: return
     
-    # --- YORUMLA COOLDOWN KONTROLÜ (BİLDİRİMLİ MOD) ---
+    # --- YORUMLA COOLDOWN KONTROLÜ ---
     user_id = update.effective_user.id
     now = datetime.datetime.now()
     
     if user_id in yorumla_last_usage:
         gecen_sure = (now - yorumla_last_usage[user_id]).total_seconds()
         if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 30:
-            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES *  - gecen_sure) // 30)
+            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES * 30 - gecen_sure) // 30)
             if kalan_dakika == 0: kalan_dakika = 1
-            await update.message.reply_text(f"🛑 tekrar kullanım için {kalan_dakika} dakika daha bekle.")
+            await update.message.reply_text(f"🛑 {kalan_dakika} dakika daha bekle.")
             return
     # ----------------------------------------------
     
