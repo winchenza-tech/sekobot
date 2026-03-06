@@ -14,7 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
 
 # --- 1. WEB SUNUCUSU ---
-flask_app = Flask(__name__)
+flask_app = Flask('')
 
 @flask_app.route('/')
 def home():
@@ -118,15 +118,19 @@ async def announce_command(update, context):
 async def comment_command(update, context):
     if update.effective_chat.id != AUTHORIZED_GROUP_ID or not update.message.reply_to_message: return
     
-    # --- YORUMLA COOLDOWN KONTROLÜ (SESSİZ MOD) ---
+    # --- YORUMLA COOLDOWN KONTROLÜ ---
     user_id = update.effective_user.id
     now = datetime.datetime.now()
     
     if user_id in yorumla_last_usage:
         gecen_sure = (now - yorumla_last_usage[user_id]).total_seconds()
         if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 60:
-            return  # Süre dolmadıysa sessizce işlemi iptal et
-    # ----------------------------------------------
+            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES * 60 - gecen_sure) // 60)
+            # Eğer bekleme süresi 1 dakikadan azsa 1 dakika olarak göstersin
+            if kalan_dakika == 0: kalan_dakika = 1
+            await update.message.reply_text(f"🛑 /yorumla komutunu saatte 1 kez kullanabilirsin. Lütfen {kalan_dakika} dakika daha bekle.")
+            return
+    # ---------------------------------
     
     target = update.message.reply_to_message
     t_name = target.from_user.first_name
@@ -168,7 +172,7 @@ async def summarize_command(update, context):
     
     if chat_id in last_usage:
         if (now - last_usage[chat_id]).total_seconds() < COOLDOWN_MINUTES * 60:
-            await update.message.reply_text("🛑 Henüz hazır değilim! Zenithar'ı kızdırmamalıyım.")
+            await update.message.reply_text("🛑 itiraz yok.")
             return
             
     msg_text = update.message.text.lower()
@@ -240,6 +244,7 @@ async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAUL
     if not update.message or not update.message.sticker: return
     
     set_name = update.message.sticker.set_name
+    # Yeni sticker paketi eklendi
     banned_packs = ["Dickss", "Trbanl", "FapPornVulgarKissLoveNsfwXXX"]
     
     BEYPAZARI_ID = 8561696979
@@ -249,6 +254,7 @@ async def delete_forbidden_stickers(update: Update, context: ContextTypes.DEFAUL
     if set_name in banned_packs:
         try: 
             await update.message.delete()
+            # Silme işleminden sonra mesaj gönderme eklendi
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="Bu sticker yasaklı. Sildim gitti."
@@ -270,22 +276,4 @@ async def main():
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & (~filters.Chat(chat_id=AUTHORIZED_GROUP_ID)), reject_unauthorized_group))
 
     application.add_handler(CommandHandler("duyuru", announce_command))
-    application.add_handler(CommandHandler("yorumla", comment_command))
-    application.add_handler(CommandHandler("yanitla", admin_text_reply))
-    application.add_handler(CommandHandler("getir", getir_command))
-    application.add_handler(CommandHandler("kendinyanitla", kendin_yanitla_command))
-    application.add_handler(MessageHandler(filters.Sticker.ALL, delete_forbidden_stickers))
-    application.add_handler(MessageHandler(filters.Regex(r'(?i)^/son(100|200)'), summarize_command))
-    application.add_handler(MessageHandler((filters.TEXT | filters.VOICE | filters.AUDIO) & (~filters.COMMAND), record_message))
-
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling(drop_pending_updates=True)
-    while True:
-        await asyncio.sleep(3600)
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except Exception as e:
-        print(f"Kritik Hata: {e}")
+    application.add_handler(CommandHandler("yorumla", comment_
