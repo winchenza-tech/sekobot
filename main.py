@@ -169,7 +169,7 @@ async def summarize_command(update, context):
     
     if chat_id in last_usage:
         if (now - last_usage[chat_id]).total_seconds() < COOLDOWN_MINUTES * 60:
-            await update.message.reply_text("🛑 Henüz hazır değilim! Zenithar'ı kızdırmamalıyım.")
+            await update.message.reply_text("🛑Henüz hazır değilim! Zenithar'ı kızdırmamalıyım.")
             return
             
     msg_text = update.message.text.lower()
