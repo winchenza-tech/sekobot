@@ -22,7 +22,8 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
-    flask_app.run(host='0.0.0.0', port=port)
+    # use_reloader=False eklendi (Çift çalışma sorununu önlemek için kritik)
+    flask_app.run(host='0.0.0.0', port=port, use_reloader=False)
 
 def keep_alive():
     t = Thread(target=run_flask)
@@ -123,8 +124,8 @@ async def comment_command(update, context):
     
     if user_id in yorumla_last_usage:
         gecen_sure = (now - yorumla_last_usage[user_id]).total_seconds()
-        if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 30:
-            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES * 30 - gecen_sure) // 30)
+        if gecen_sure < YORUMLA_COOLDOWN_MINUTES * 60:
+            kalan_dakika = int((YORUMLA_COOLDOWN_MINUTES * 60 - gecen_sure) // 60)
             if kalan_dakika == 0: kalan_dakika = 1
             await update.message.reply_text(f"🛑 {kalan_dakika} dakika daha bekle.")
             return
@@ -261,8 +262,18 @@ async def main():
     keep_alive()
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Europe/Istanbul"))
-    target_hours = '1,2,3,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0'
-    scheduler.add_job(send_asparagas_haber, 'cron', hour=target_hours, minute=45, args=[application])
+    
+    # Asparagas motoru için çift çalışmayı önleyen coalesce=True ve max_instances=1 parametreleri eklendi.
+    # Her 2 saatte bir çalışması için hour='*/2' yapıldı.
+    scheduler.add_job(
+        send_asparagas_haber, 
+        'cron', 
+        hour='*/2', 
+        minute=0, 
+        args=[application], 
+        coalesce=True, 
+        max_instances=1
+    )
     scheduler.start()
 
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE & (~filters.User(ADMIN_ID)), reject_private))
