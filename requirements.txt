@@ -1,6 +1,8 @@
-python-telegram-bot
-google-genai
-Flask
-APScheduler
-pytz
-nest_asyncio
+aiogram
+cachetools
+python-dotenv
+aiosqlite
+pandas
+apscheduler
+aiohttp
+google-generativeai
