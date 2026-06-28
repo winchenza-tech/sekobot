@@ -1,5 +1,5 @@
 import os, json, asyncio, logging, math, re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -11,9 +11,6 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes, ConversationHandler
 )
 from telegram.constants import ParseMode
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float,
@@ -76,7 +73,7 @@ class UserFilter(Base):
     half_time    = Column(String)                  # "0-0", "any"
     min_minute   = Column(Integer, default=0)
     max_minute   = Column(Integer, default=90)
-    underdog_dep = Column(Boolean, default=False)  # Deplasман favori mi?
+    underdog_dep = Column(Boolean, default=False)  # Deplasman favori mi?
     market       = Column(String, default="0.5_over")
     active       = Column(Boolean, default=True)
     created_at   = Column(DateTime, default=datetime.utcnow)
@@ -211,7 +208,6 @@ def parse_stat(stats: list, team_side: str, stat_name: str) -> int:
 
 def pressure_index(stats: list, side: str = "home") -> float:
     """Baskı indeksi: şutlar, korner ve tehlikeli atakların ağırlıklı ortalaması"""
-    idx = stats.index if stats else None
     shots      = parse_stat(stats, side, "Shots on Goal") * 1.5
     corners    = parse_stat(stats, side, "Corner Kicks")  * 1.0
     dangerous  = parse_stat(stats, side, "Total Shots")   * 0.8
@@ -322,9 +318,9 @@ async def kasa(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"💰 <b>KASA DURUMU</b>\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"{bar}\n\n"
-        f"💵 Toplam Kasa:     <b>{u.bankroll:.2f} ₺</b>\n"
+        f"💵 Toplam Kasa:   <b>{u.bankroll:.2f} ₺</b>\n"
         f"📅 Günlük Bütçe:   <b>{u.daily_budget:.2f} ₺</b>\n"
-        f"🛑 Zarar Limiti:    <b>{u.daily_loss_lim:.2f} ₺</b>\n\n"
+        f"🛑 Zarar Limiti:   <b>{u.daily_loss_lim:.2f} ₺</b>\n\n"
         f"📉 Bugün Harcanan: <b>{u.daily_spent:.2f} ₺</b>\n"
         f"📈 Bugün Kazanılan:<b>{u.daily_won:.2f} ₺</b>\n"
         f"💹 Günlük Net:     <b>{net_today:+.2f} ₺</b>\n\n"
@@ -426,9 +422,9 @@ async def kelly_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"📉 Büronun ihtimali: <b>%{imp_prob*100:.1f}</b>\n"
         f"💡 Kenar (Edge): <b>%{edge:.1f}</b> {is_value}\n\n"
         f"💰 Kasan: <b>{bankroll:.2f} ₺</b>\n\n"
-        f"🔴 Tam Kelly:    <b>{full_kelly:.2f} ₺</b> (riskli)\n"
-        f"🟡 1/2 Kelly:    <b>{half_kelly:.2f} ₺</b> (dengeli)\n"
-        f"🟢 1/4 Kelly:    <b>{qrtr_kelly:.2f} ₺</b> (önerilen)\n"
+        f"🔴 Tam Kelly:   <b>{full_kelly:.2f} ₺</b> (riskli)\n"
+        f"🟡 1/2 Kelly:   <b>{half_kelly:.2f} ₺</b> (dengeli)\n"
+        f"🟢 1/4 Kelly:   <b>{qrtr_kelly:.2f} ₺</b> (önerilen)\n"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -845,12 +841,6 @@ async def dusen_oran(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("📉 Düşen oranlar taranıyor...")
 
     try:
-        # Gerçek BetsAPI entegrasyonu:
-        # async with aiohttp.ClientSession() as sess:
-        #     r = await sess.get("https://api.betsapi.com/v2/bet365/inplay",
-        #                        params={"token": BETSAPI_KEY})
-        #     data = await r.json()
-
         # Simüle edilmiş veri (API bağlanınca kaldır):
         simulated = [
             {"match": "Arsenal - Chelsea", "league": "Premier League",
@@ -1154,9 +1144,9 @@ async def gecmis(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 # ─────────────────────────────────────────
-# ZAMANLANMIŞ GÖREVLER
+# ZAMANLANMIŞ GÖREVLER (JobQueue İçin)
 # ─────────────────────────────────────────
-async def scheduled_daily_analysis(app: Application):
+async def scheduled_daily_analysis(context: ContextTypes.DEFAULT_TYPE):
     """Her gece 23:30'da önümüzdeki 2 günün analizi"""
     logger.info("Zamanlanmış analiz başlatıldı...")
     try:
@@ -1207,7 +1197,7 @@ async def scheduled_daily_analysis(app: Application):
 
         for u in users:
             try:
-                await app.bot.send_message(
+                await context.bot.send_message(
                     chat_id=u.chat_id,
                     text=text,
                     parse_mode=ParseMode.HTML
@@ -1220,7 +1210,7 @@ async def scheduled_daily_analysis(app: Application):
         logger.error(f"Zamanlanmış görev hatası: {e}")
 
 
-async def live_scanner_job(app: Application):
+async def live_scanner_job(context: ContextTypes.DEFAULT_TYPE):
     """Her 60 saniyede canlı maçları tara, filtre eşleşirse bildir"""
     try:
         matches = await APIFootball.live_matches()
@@ -1255,7 +1245,7 @@ async def live_scanner_job(app: Application):
                     f"🎯 Filtren eşleşti! Hızlı hareket et."
                 )
                 try:
-                    await app.bot.send_message(
+                    await context.bot.send_message(
                         chat_id=chat_id, text=text,
                         parse_mode=ParseMode.HTML
                     )
@@ -1275,7 +1265,6 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     if data == "live":
-        # /canli komutunu simüle et
         update.message = query.message
         await canli(update, ctx)
 
@@ -1404,6 +1393,25 @@ def main():
         ("gecmis",         "Geçmiş tahminler"),
     ]
 
+    # JobQueue Yapılandırması
+    job_queue = app.job_queue
+
+    # Her gece UTC saatiyle 20:30'da (Türkiye Saati ile 23:30'da) analiz gönder
+    job_queue.run_daily(
+        scheduled_daily_analysis,
+        time=time(hour=4, minute=56),
+        name="daily_analysis"
+    )
+
+    # Bot başlatıldıktan 10 saniye sonra başla ve her 60 saniyede bir çalıştır
+    job_queue.run_repeating(
+        live_scanner_job,
+        interval=60,
+        first=10,
+        name="live_scanner"
+    )
+    logger.info("📡 Yerleşik JobQueue zamanlayıcıları kuruldu.")
+
     # Handler'lar
     app.add_handler(CommandHandler("start",          start))
     app.add_handler(CommandHandler("kupon",          kupon))
@@ -1427,27 +1435,7 @@ def main():
     app.add_handler(CommandHandler("gecmis",         gecmis))
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-    # Scheduler — APScheduler
-    scheduler = AsyncIOScheduler()
-
-    # Her gece 23:30 TR saatiyle (UTC+3 = 20:30 UTC)
-    scheduler.add_job(
-        lambda: asyncio.ensure_future(scheduled_daily_analysis(app)),
-        CronTrigger(hour=4, minute=40, timezone="UTC"),
-        id="daily_analysis"
-    )
-
-    # Her 60 saniyede canlı tarama
-    scheduler.add_job(
-        lambda: asyncio.ensure_future(live_scanner_job(app)),
-        "interval", seconds=60,
-        id="live_scanner"
-    )
-
-    scheduler.start()
-    logger.info("📡 Scheduler başlatıldı.")
-
-    # Bot komutlarını kaydet
+    # Bot komutlarını Telegram'a kaydet
     async def post_init(application: Application):
         await application.bot.set_my_commands(
             [BotCommand(cmd, desc) for cmd, desc in commands]
