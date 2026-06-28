@@ -1433,7 +1433,7 @@ def main():
     # Her gece 23:30 TR saatiyle (UTC+3 = 20:30 UTC)
     scheduler.add_job(
         lambda: asyncio.ensure_future(scheduled_daily_analysis(app)),
-        CronTrigger(hour=04, minute=25, timezone="UTC"),
+        CronTrigger(hour=4, minute=25, timezone="UTC"),
         id="daily_analysis"
     )
 
