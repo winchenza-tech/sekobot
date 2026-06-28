@@ -1,6 +1,6 @@
-python-telegram-bot==20.7
-aiohttp>=3.9
-apscheduler>=3.10
-sqlalchemy>=2.0
+python-telegram-bot[job-queue]
+aiohttp
+apscheduler
+sqlalchemy
 psycopg2-binary
 python-dotenv
