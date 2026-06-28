@@ -1399,7 +1399,7 @@ def main():
     # Her gece UTC saatiyle 20:30'da (Türkiye Saati ile 23:30'da) analiz gönder
     job_queue.run_daily(
         scheduled_daily_analysis,
-        time=time(hour=4, minute=56),
+        time=time(hour=5, minute=08),
         name="daily_analysis"
     )
 
